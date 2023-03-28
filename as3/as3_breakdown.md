@@ -28,16 +28,16 @@ Some useful resources to help understand how AS3 works:
 
 ## Telemetry Streaming AS3 details
 
-## Overview
+### Overview
 
 The AS3 declaration will create the following objects in the `/Common` partition:
-* iRule 
-* Virtual Server
-* Pool
-* Log Destination x2
-* Log Publisher
-* Security Logging Profile x2 (one for ASM, one for AFM - these could be combined)
-* LTM request logging profile
+* iRule - `Local Traffic > iRules > iRule List`
+* Virtual Server - `Local Traffic > Virtual Servers > Virtual Server List`
+* Pool - `Local Traffic > Pools > Pool List`
+* Log Destination x2 - `System > Logs > Configuration > Log Destinations`
+* Log Publisher - `System > Logs > Configuration > Log Publishers`
+* LTM request logging profile `Local Traffic > Profiles > Other > Request Logging`
+* Security Logging Profile x2 (one for ASM, one for AFM - these could be combined) - `Security > Event Logs > Logging Profiles`
 
 
 
@@ -216,6 +216,8 @@ This declaration also has a log destination of type `Splunk`, which forwards to 
 * Used to send HTTP request logs to the Splunk endpoint
 * Formats in a key=value format
 * TODO: Find documentation on supported templates (not really an AS3 thing)
+
+[Schema Documentation](https://clouddocs.f5.com/products/extensions/f5-appsvcs-extension/latest/refguide/schema-reference.html#traffic-log-profile)
 
 
 ```json
