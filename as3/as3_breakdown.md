@@ -28,6 +28,17 @@ Some useful resources to help understand how AS3 works:
 
 ## Telemetry Streaming AS3 details
 
+## Overview
+
+The AS3 declaration will create the following objects in the `/Common` partition:
+* iRule 
+* Virtual Server
+* Pool
+* Log Destination x2
+* Log Publisher
+* Security Logging Profile x2 (one for ASM, one for AFM - these could be combined)
+* LTM request logging profile
+
 
 
 
@@ -198,6 +209,40 @@ This declaration also has a log destination of type `Splunk`, which forwards to 
 ```
 
 ![image](https://user-images.githubusercontent.com/39548246/228136761-04918e97-937f-436d-a23d-b10286137d84.png)
+
+### LTM Logging Profile
+
+* Creates the LTM request logging profile named `telemetry_traffic_log_profile` under `Local Traffic > Profiles > Other > Request Logging`
+* Used to send HTTP request logs to the Splunk endpoint
+* Formats in a key=value format
+* TODO: Find documentation on supported templates (not really an AS3 thing)
+
+
+```json
+"telemetry_traffic_log_profile": {
+   "class": "Traffic_Log_Profile",
+   "requestSettings": {
+      "requestEnabled": true,
+      "requestProtocol": "mds-tcp",
+      "requestPool": {
+         "use": "telemetry"
+      },
+      "requestTemplate": "event_source=\"request_logging\",hostname=\"$BIGIP_HOSTNAME\",client_ip=\"$CLIENT_IP\",server_ip=\"$SERVER_IP\",http_method=\"$HTTP_METHOD\",http_uri=\"$HTTP_URI\",virtual_name=\"$VIRTUAL_NAME\",event_timestamp=\"$DATE_HTTP\""
+      },
+      "responseSettings": {
+         "responseEnabled": true,
+         "responseProtocol": "mds-tcp",
+         "responsePool": {
+            "use": "telemetry"
+         },
+         "responseTemplate": "event_source=\"response_logging\",hostname=\"$BIGIP_HOSTNAME\",client_ip=\"$CLIENT_IP\",server_ip=\"$SERVER_IP\",http_method=\"$HTTP_METHOD\",http_uri=\"$HTTP_URI\",virtual_name=\"$VIRTUAL_NAME\",event_timestamp=\"$DATE_HTTP\",http_statcode=\"$HTTP_STATCODE\",http_status=\"$HTTP_STATUS\",response_ms=\"$RESPONSE_MSECS\""
+      }
+}
+
+```
+
+![image](https://user-images.githubusercontent.com/39548246/228143564-e31d86e2-b69c-4725-9fa8-a9436eb63c60.png)
+
 
 ### Security Logging Profile (asm/awaf)
 
