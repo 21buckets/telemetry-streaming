@@ -54,7 +54,7 @@ The below snippet is the boilerplate required for any AS3 declaration. There are
 
 ### Tenant Information
 
-* This sets up the Big-IP partition your configuration is being deployed into. 
+* This sets up the Big-IP partition your configuration is being deployed into, see `System > Users > Partition List` (or look for the dropdown on the top right)
 * The declaration below will be creating objects in the `Common` partition. 
 * Generally speaking, each new AS3 declaration should go into a new partition (i.e. one that doesnt exist already) to avoid accidentally deleting previously exisitng objects.
 * The Common partition is special, and should only be used if you want to share objects between other partitions. Read up on this in the [FAQ](https://clouddocs.f5.com/products/extensions/f5-appsvcs-extension/latest/userguide/faq.html), including information on the `Shared` application and Template.
@@ -80,6 +80,7 @@ Using `Common` for the tenant (partion in Big-IP language) and `Shared` will cre
 ### iRule
 
 * This creates an iRule with the name `telemetry_local_rule`, with the iRule contents being the value of `telemetry_local_rule.iRule`
+*  Can be found under `Local Traffic > iRules > iRule List`
 * Rather than storing the contents of the iRule directly in the declaration here, you can reference a HTTP endpoint with the iRule configuration (recommended for more advanced iRules)
 
 [Schema documentation](https://clouddocs.f5.com/products/extensions/f5-appsvcs-extension/latest/refguide/schema-reference.html#irule)
@@ -100,6 +101,7 @@ Using `Common` for the tenant (partion in Big-IP language) and `Shared` will cre
 ### Virtual Servers
 
 * This creates a virtual server `telemetry_local` listening on port `6514` to be used as a local listener for Telemetry Streaming
+* Can be found under `Local Traffic > Virtual Servers > Virtual Servers List`
 * It has the previously mentioned iRule attached to it that will send connection requests to the Big-IP device itself
 * `Service_TCP` works as a template for creating a TCP based virtual server with most properties set as defaults by AS3 itself, so the JSON required by the user is drastically reduced
 
@@ -125,6 +127,7 @@ Using `Common` for the tenant (partion in Big-IP language) and `Shared` will cre
 ### Pool
 
 * This creates an LTM pool called `telemetry`
+* Can be found under `Local Traffic > Pools > Pool List`
 * The pool node/member is the local VS listener previously created
 * It is required by the logging profile we will be creating further on
 * Any property not set inherits default values that can be found in the schema documentation
@@ -156,17 +159,74 @@ Using `Common` for the tenant (partion in Big-IP language) and `Shared` will cre
 
 * Creates the log destination found in `System > Logs > Configuration > Log Destinations`
 * Sends logs to the pool we created (that sends it on to the local listener, that in turn sends it to local device on port `6514` via the iRule) - This is where the Telemetry Streaming application is actually running
+* Note the use of `telemetry_hsl.pool.use` This syntax is telling AS3 to use the pool defined within the overarching declaration. If you wanted to refrence an already existing pool, you would use the `bigip` syntax (see [Pointer_BIGIP](https://clouddocs.f5.com/products/extensions/f5-appsvcs-extension/latest/refguide/schema-reference.html#pointer-bigip)), i.e. `telemetry_hsl.pool.bigip: "/Common/existing_pool"
+
+
+[Schema Documentation](https://clouddocs.f5.com/products/extensions/f5-appsvcs-extension/latest/refguide/schema-reference.html#log-destination)
 
 
 
 ```json
 "telemetry_hsl": {
-                    "class": "Log_Destination",
-                    "type": "remote-high-speed-log",
-                    "protocol": "tcp",
-                    "pool": {
-                        "use": "telemetry"
-                    }
-                }
+   "class": "Log_Destination",
+   "type": "remote-high-speed-log",
+   "protocol": "tcp",
+   "pool": {
+       "use": "telemetry"
+   }
+}
 ```
+
+![image](https://user-images.githubusercontent.com/39548246/228136433-8fc18c95-5a73-4359-b4fe-069641a1b20e.png)
+
+
+This declaration also has a log destination of type `Splunk`, which forwards to the above log destination... F5 can be weird... I am not exactly sure why this is required - I am going to assume the `Splunk` log destination adds some metadata to help with splunk ingestion. I should find the documentation and link it here...
+
+### Log Publisher
+
+* Creates the log publisher named `telemetry_publisher` under `System > Logs > Configuration > Log Publishers`
+* Consumed by the logging profile to send logs to the aforementioned Splunk log destination (denoted by the `use` syntax)
+* For all this work, note that the security logging profiles (for ASM and AFM) dont actually use these log publishers, it is only the `Traffic_log_profile` that does.
+
+```json
+ "telemetry_publisher": {
+   "class": "Log_Publisher",
+   "destinations": [{
+      "use": "telemetry_formatted"
+   }]
+}
+```
+
+![image](https://user-images.githubusercontent.com/39548246/228136761-04918e97-937f-436d-a23d-b10286137d84.png)
+
+### Security Logging Profile (asm/awaf)
+
+* Creates the security logging profile named `telemetry_asm_security_log_profile` found under `Security > Event Logs > Logging Profiles`
+* The log destination is directly configurable in this profile, rather than using the log publisher/destination configuration mentioned previously. Likely due to ASM being an acquired product (a long time ago) so is integrated slightly differently.
+* The `remoteStorage` key refers to the `Logging Format` option in the GUI
+* Note the log destination is still our Telemetry Streaming listener
+* `storageFilter.requestType` is saying to send all requests to Telemetry Streaming, not just the illegal ones. I'd recommend changing this to `illegal-including-staged-signatures` (see [documentation](https://clouddocs.f5.com/products/extensions/f5-appsvcs-extension/latest/refguide/schema-reference.html#security-log-profile-protocol-sip-storageformat)) once you're happy log ingestion is working properly. No point sending all requests to Splunk unless absolutely necessary.
+
+**Schema Documentation:** 
+* This is a special class type. The class is `Security_Log_Profile` which has a schema definition [here](https://clouddocs.f5.com/products/extensions/f5-appsvcs-extension/latest/refguide/schema-reference.html#security-log-profile)
+* However, the configuration is under a key called `application`. This is telling you it is an "application" type logging profile, so you need to look at the Security_Log_Profile_Application [schema definition](https://clouddocs.f5.com/products/extensions/f5-appsvcs-extension/latest/refguide/schema-reference.html#security-log-profile)
+
+```json
+"telemetry_asm_security_log_profile": {
+   "class": "Security_Log_Profile",
+    "application": {
+       "localStorage": false,
+        "remoteStorage": "splunk",
+        "servers": [{
+           "address": "255.255.255.254",
+           "port": "6514"
+        }],
+        "storageFilter": {
+           "requestType": "all"
+        }
+   }
+}
+```
+![image](https://user-images.githubusercontent.com/39548246/228140146-5d33cbb4-a4db-42d9-9411-112c1492c28c.png)
+
                 
