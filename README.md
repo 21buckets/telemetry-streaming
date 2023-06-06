@@ -103,7 +103,10 @@ The declaration is all that is required to send Big-IP metrics to the Splunk end
 
 ## Configuring Big-IP listeners and logging
 
-As previously mentioned, Telemetry Streaming does not handle application level logging from LTM/ASM/APM/AVR etc. This is all handled through the standard logging profiles. We can (and will) integrate this with AS3. Logging profiles need a log destination to point to, so this next part exposes the Telemetry Streaming endpoint via the use of a virtual server.
+As previously mentioned, Telemetry Streaming does not handle application level logging from LTM/ASM/APM/AVR etc. This is all handled through the standard logging profiles. We can (and will) integrate this with AS3. Logging profiles need a log destination to point to, so this next part exposes the Telemetry Streaming endpoint via the use of a virtual server. https://clouddocs.f5.com/products/extensions/f5-telemetry-streaming/1.20/event-listener.html#configuring-logging-sources
+
+![image](https://github.com/21buckets/telemetry-streaming/assets/39548246/286a8a6f-09c5-4fa2-9aaa-b64a770a6bf5)
+
 
 I am going to use AS3 to create the required logging profiles, virtual server listeners, pools, and iRules. You can do all of this manually, but AS3 makes it a very simple single declaration. I recommend reading up on AS3 before using though.
 
