@@ -13,6 +13,7 @@ This README is to assist in implementing Telemetry Streaming and provide relevan
 * Provide POSTMAN collection for Telemetry Streaming and AS3 declarations
 * Add steps for generating an API token for the Big-IP
 * Remove code snippets from README and move to specific files
+*  Reference https://community.f5.com/t5/technical-articles/how-i-did-it-quot-visualizing-data-with-f5-ts-and-splunk-quot/ta-p/282489 for Splunk dashboarding
 
 
 ## Preparing Splunk
